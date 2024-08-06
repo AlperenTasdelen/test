@@ -1,0 +1,1 @@
+I am currently working on developing a database application on SpringBoot, I want to use Lombok and Spring Web, I am using IntelliJ IDE and Java 17, I will use Apache Solr framework and docker for further containrization and database structure. What should I do? make me a sample for my application named SampleDatabase
