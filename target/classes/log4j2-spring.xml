@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration packages="tubitak.bilgem.milat.log">
+    <Properties>
+        <Property name="baseDir">${sys:user.home}/.lct/log/test</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- Async Loggers will auto-flush in batches, so switch off immediateFlush. -->
+        <RollingFile name="rollingFile"
+                     fileName="${baseDir}/lct.log"
+                     filePattern="${baseDir}/zip/lct-%d{yyyy-MM-dd}_%i.log.zip"
+                     immediateFlush="true">
+            <PatternLayout>
+                <Pattern>%d{dd-MM-yy HH:mm:ss} [%p] [%F:%L] %m %n</Pattern>
+            </PatternLayout>
+            <Policies>
+                <OnStartupTriggeringPolicy/>
+                <TimeBasedTriggeringPolicy/>
+                <CronTriggeringPolicy schedule="0 0 0 * * ?" evaluateOnStartup="true"/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy>
+                <Delete basePath="${LOG_DIR}" maxDepth="2">
+                    <IfFileName glob="*/*.log*"/>
+                    <IfLastModified age="P30D"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+        <Console name="STDOUT" target="SYSTEM_OUT">
+            <PatternLayout>
+                <pattern>%d{dd-MM-yy HH:mm:ss} [%p] [%F:%L] %m %n</pattern>
+            </PatternLayout>
+        </Console>
+
+        <TcmsRestAppender
+                name="TcmsRestAppender"
+                maxBulkSize="5"
+                maxDelayTime="2000"
+                hardwareName="none"
+                functionType="tmcs-test"
+        >
+            <HttpAddress endpointAddress="http://localhost:8001/api/log/subSystemLogs"/>
+        </TcmsRestAppender>
+    </Appenders>
+
+    <Loggers>
+        <Root level="ALL" includeLocation="true">
+            <AppenderRef level="INFO" ref="rollingFile"/>
+            <AppenderRef level="INFO" ref="STDOUT"/>
+            <AppenderRef level="INFO" ref="TcmsRestAppender"/>
+        </Root>
+    </Loggers>
+
+</Configuration>
