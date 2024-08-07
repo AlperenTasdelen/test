@@ -7,4 +7,5 @@ open module tmcs.srv {
     requires spring.web;
     requires org.apache.logging.log4j;
     requires lombok;
+    requires solr.solrj;
 }

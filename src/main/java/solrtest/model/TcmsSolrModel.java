@@ -1,4 +1,4 @@
-package solrtest;
+package solrtest.model;
 
 import lombok.*;
 
