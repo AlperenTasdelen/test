@@ -16,7 +16,12 @@ public class SolrTest implements CommandLineRunner {
 
 	@Override
 	public void run(String... args) throws Exception {
-//		solrService.createCollection("LogCollection");
-//		solrService.addSampleData("sample_collection");
+
+		// Create a collection
+		//SolrService solrService = new SolrService("http://localhost:8983/solr");
+
+		//solrService.createCollection("LogCollection");
+		//solrService.createCollection("SampleCollection");
+		//solrService.addSampleData("SampleCollection");
 	}
 }

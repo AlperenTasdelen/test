@@ -19,9 +19,10 @@ services:
       - ZK_HOST=zoo1:2181
       #- SOLR_HOST=10.40.31.35
       #- SOLR_JETTY_HOST=0.0.0.0
-      #- SOLR_PORT=8981 # is this necessary?
+      #- SOLR_PORT=8983 # is this necessary?
       - SOLR_JAVA_MEM=-Xms5g -Xmx5g
       - "SOLR_OPTS=-Dsolr.query.maxBooleanClauses=100000 -Dsolr.filterCache.size=20480 -Dsolr.queryResultCache.size=2048"
+    #url: http://localhost:8983/solr
 
     networks:
       - solr_net
