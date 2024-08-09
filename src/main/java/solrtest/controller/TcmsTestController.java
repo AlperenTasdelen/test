@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import solrtest.SolrService;
 import solrtest.model.TcmsSolrModel;
+import solrtest.LogManager;
 
 @Log4j2
 @RestController
@@ -12,9 +13,11 @@ import solrtest.model.TcmsSolrModel;
 public class TcmsTestController {
 
     private final SolrService solrService;
+    private final LogManager logManager;
 
-    public TcmsTestController(SolrService solrService) {
+    public TcmsTestController(SolrService solrService, LogManager logManager) {
         this.solrService = solrService;
+        this.logManager = logManager;
     }
 
     @PostMapping("/save")
@@ -29,6 +32,7 @@ public class TcmsTestController {
 
         try {
             solrService.addSampleData(solrModel);
+            logManager.logAction("INFO", "SAVE", "HardwareName1", "SaveFunction", "Saving log with ID: " + solrModel.getId());
         } catch (Exception e) {
             log.error("Failed to save logs: {}", e.getMessage());
             return ResponseEntity.status(500).body("Failed to save logs");
@@ -49,6 +53,7 @@ public class TcmsTestController {
 
         try {
             TcmsSolrModel solrModel = solrService.getSampleData(id);
+            logManager.logAction("INFO", "GET", "HardwareName1", "GetFunction", "Retrieving log with ID: " + id);
             return ResponseEntity.ok(solrModel);
         } catch (Exception e) {
             log.error("Failed to get logs: {}", e.getMessage());

@@ -18,15 +18,18 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import solrtest.model.TcmsSolrModel;
+import solrtest.model.LogModel;
 
 import java.io.IOException;
-import java.util.concurrent.locks.ReentrantLock;
 
 @Log4j2
 @Service
 public class SolrService {
 
     private final SolrClient solrClient;
+
+    @Value("${solr.log.collection}")
+    private String logCollection;
 
     public SolrService(@Value("${solr.url}") String solrUrl) {
         this.solrClient = new Http2SolrClient.Builder(solrUrl).build(); // ew HttpSolrClient.Builder(solrUrl).build();
@@ -78,5 +81,10 @@ public class SolrService {
             log.error("Error retrieving document", e);
             return null;
         }
+    }
+
+    public void addLog(LogModel logModel) throws SolrServerException, IOException {
+        solrClient.addBean(logCollection, log);
+        solrClient.commit("LogCollection");
     }
 }
