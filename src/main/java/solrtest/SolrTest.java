@@ -1,6 +1,5 @@
 package solrtest;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -16,12 +15,17 @@ public class SolrTest implements CommandLineRunner {
 
 	@Override
 	public void run(String... args) throws Exception {
+		//Initialize SolrService with the Solr URL
+		SolrService solrService = new SolrService("http://localhost:8983/solr");
 
-		// Create a collection
-		//SolrService solrService = new SolrService("http://localhost:8983/solr");
+		//This code is for debugging purposes only
 
-		//solrService.createCollection("LogCollection");
-		//solrService.createCollection("SampleCollection");
-		//solrService.addSampleData("SampleCollection");
+		// Check if DocumentCollection exists, if not, create it
+		if (!solrService.collectionExists("DocumentCollection")) {
+			solrService.createCollection("DocumentCollection");
+		}
+
+		// Clear all data in DocumentCollection
+		solrService.clearCollection("DocumentCollection");
 	}
 }

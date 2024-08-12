@@ -10,7 +10,7 @@ import org.apache.solr.client.solrj.beans.Field;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class LogModel {
+public class DocumentModel {
     @Field
     private int id;
 

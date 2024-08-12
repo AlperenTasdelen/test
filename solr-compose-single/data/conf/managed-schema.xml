@@ -110,7 +110,18 @@
          If you don't need it, consider removing it and the corresponding copyField directive.
     -->
 
-    <field name="id" type="string" indexed="true" stored="true" required="true" multiValued="false" />
+    <!-- I should be able to add these fields
+    <field name="id" type="int" indexed="true" stored="true" required="true" multiValued="false" />
+    <field name="logLevel" type="string" indexed="true" stored="true" multiValued="false"/>
+    <field name="logType" type="string" indexed="true" stored="true" multiValued="false"/>
+    <field name="hardwareName" type="string" indexed="true" stored="true" multiValued="false"/>
+    <field name="functionType" type="string" indexed="true" stored="true" multiValued="false"/>
+    <field name="logDate" type="date" indexed="true" stored="true" multiValued="false"/>
+    <field name="context" type="string" indexed="true" stored="true" multiValued="false"/>
+    -->
+
+
+    <field name="id" type="int" indexed="true" stored="true" required="true" multiValued="false" />
     <!-- docValues are enabled by default for long type so we don't need to index the version field  -->
     <field name="_version_" type="plong" indexed="false" stored="false"/>
     <field name="_root_" type="string" indexed="true" stored="false" docValues="false" />
