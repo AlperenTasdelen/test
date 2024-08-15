@@ -8,4 +8,6 @@ open module tmcs.srv {
     requires org.apache.logging.log4j;
     requires lombok;
     requires solr.solrj;
+    requires java.management;
+
 }

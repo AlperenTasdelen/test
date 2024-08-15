@@ -1,1 +1,5 @@
-In this chat, we are going to adjust a basic SpringBoot application to make basic querying operations on Apache Solr and docker-compose. I have 6 basic files to work on: pom.xml, SampleLogger.java, SolrTest.java, docker-compose.yml, solr.xml and managed-schema.xml. I can provide you these files if necessary. I want to create a new collection and core first after that I want to put a sample data to this database, I will design fields and dynamicFields later on, make me a startup and ask if these files are necessary to you
+In this chat, we are going to adjust a basic SpringBoot application to make basic querying operations on Apache Solr and docker-compose.
+I have 6 basic files to work on: pom.xml, SampleLogger.java, SolrTest.java, docker-compose.yml, solr.xml and managed-schema.xml.
+I can provide you these files if necessary.
+In this code, learn the main sample structure first and we will study on elastic search, what should I do? Make me some endpoints that utilizes proper endpoints for search.
+Now I will provide you my sample codes:

@@ -2,6 +2,7 @@ package solrtest.model;
 
 import lombok.*;
 import java.util.Date;
+import java.util.UUID;
 
 import org.apache.solr.client.solrj.beans.Field;
 
@@ -11,24 +12,24 @@ import org.apache.solr.client.solrj.beans.Field;
 @AllArgsConstructor
 @Builder
 public class DocumentModel {
-    @Field
-    private int id;
+    @Field("id")
+    private UUID id;
 
-    @Field
+    @Field("logLevel")
     private String logLevel;
     
-    @Field
+    @Field("logType")
     private String logType;
 
-    @Field
+    @Field("hardwareName")
     private String hardwareName;
     
-    @Field
+    @Field("functionType")
     private String functionType;
     
-    @Field
+    @Field("logDate")
     private Date logDate;
     
-    @Field
+    @Field("context")
     private String context;
 }

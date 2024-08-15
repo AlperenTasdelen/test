@@ -27,5 +27,9 @@ public class SolrTest implements CommandLineRunner {
 
 		// Clear all data in DocumentCollection
 		solrService.clearCollection("DocumentCollection");
+
+		// Generate random documents and add them to Solr
+		//SolrDataGenerator.generateRandomDocuments();
+		solrService.createRandomDocuments();
 	}
 }

@@ -1,10 +1,15 @@
 package solrtest.controller;
 
 import lombok.extern.log4j.Log4j2;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.TimeZone;
+
+import org.apache.solr.common.SolrDocumentList;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import solrtest.SolrService;
-import solrtest.DocumentManager;
 import solrtest.model.DocumentModel;
 
 @Log4j2
@@ -13,11 +18,9 @@ import solrtest.model.DocumentModel;
 public class TcmsTestController {
 
     private final SolrService solrService;
-    //private final DocumentManager documentManager;
 
-    public TcmsTestController(SolrService solrService, DocumentManager documentManager) {
+    public TcmsTestController(SolrService solrService) {
         this.solrService = solrService;
-        //this.documentManager = documentManager;
     }
 
     @PostMapping("/save")
@@ -26,7 +29,7 @@ public class TcmsTestController {
 
         // Validate incoming request
         if (solrModel == null) {
-            log.error("Invalid request data: {}", solrModel);
+            log.error("Invalid request data");
             return ResponseEntity.badRequest().body("Invalid request data");
         }
 
@@ -65,6 +68,44 @@ public class TcmsTestController {
         catch(Exception e){
             log.error("Failed to delete logs: {}", e.getMessage());
             return ResponseEntity.status(500).body("Failed to delete document with ID: " + id);
+        }
+    }
+
+    // Search
+    @GetMapping("/search")
+    public ResponseEntity<?> searchDocuments(
+            @RequestParam(required = false) String logLevel,
+            @RequestParam(required = false) String logType,
+            @RequestParam(required = false) String hardwareName,
+            @RequestParam(required = false) String functionType,
+            @RequestParam(required = false) String logDate,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(defaultValue = "0") Integer start,
+            @RequestParam(defaultValue = "10") Integer rows) {
+        log.info("Received search logs request: logLevel={}, logType={}, hardwareName={}, functionType={}, logDate={}, startDate={}, endDate={}, start={}, rows={}",
+                logLevel, logType, hardwareName, functionType, logDate, startDate, endDate, start, rows);
+
+        try {
+            SolrDocumentList documents = solrService.searchDocuments(logLevel, logType, hardwareName, functionType, logDate, startDate, endDate, start, rows);
+            return ResponseEntity.ok(documents);
+        } catch (Exception e) {
+            log.error("Failed to search logs: {}", e.getMessage());
+            return ResponseEntity.status(500).body("Failed to search logs");
+        }
+    }
+
+    //Delete before given date
+    @DeleteMapping("/deleteBeforeDate")
+    public ResponseEntity<?> deleteDocumentsBeforeDate(@RequestParam String date) {
+        log.info("Received delete logs before date request: {}", date);
+
+        try {
+            solrService.deleteDocumentsBeforeDate(date);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            log.error("Failed to delete logs before date: {}", e.getMessage());
+            return ResponseEntity.status(500).body("Failed to delete logs before date: " + date);
         }
     }
 }
