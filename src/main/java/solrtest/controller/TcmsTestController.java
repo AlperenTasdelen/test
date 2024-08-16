@@ -2,10 +2,6 @@ package solrtest.controller;
 
 import lombok.extern.log4j.Log4j2;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.TimeZone;
-
 import org.apache.solr.common.SolrDocumentList;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -57,20 +53,6 @@ public class TcmsTestController {
         }
     }
 
-    @DeleteMapping("/deleteById")
-    public ResponseEntity<?> deleteDocumentById(@PathVariable int id) {
-        log.info("Received delete logs request: {}", id);
-        
-        try{
-            solrService.deleteDocumentById(id);
-            return ResponseEntity.ok().build();
-        }
-        catch(Exception e){
-            log.error("Failed to delete logs: {}", e.getMessage());
-            return ResponseEntity.status(500).body("Failed to delete document with ID: " + id);
-        }
-    }
-
     // Search
     @GetMapping("/search")
     public ResponseEntity<?> searchDocuments(
@@ -79,15 +61,16 @@ public class TcmsTestController {
             @RequestParam(required = false) String hardwareName,
             @RequestParam(required = false) String functionType,
             @RequestParam(required = false) String logDate,
+            @RequestParam(required = false) String context,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "0") Integer start,
             @RequestParam(defaultValue = "10") Integer rows) {
-        log.info("Received search logs request: logLevel={}, logType={}, hardwareName={}, functionType={}, logDate={}, startDate={}, endDate={}, start={}, rows={}",
-                logLevel, logType, hardwareName, functionType, logDate, startDate, endDate, start, rows);
+        log.info("Received search logs request: logLevel={}, logType={}, hardwareName={}, functionType={}, logDate={}, context={}, startDate={}, endDate={}, start={}, rows={}",
+                logLevel, logType, hardwareName, functionType, logDate, context, startDate, endDate, start, rows);
 
         try {
-            SolrDocumentList documents = solrService.searchDocuments(logLevel, logType, hardwareName, functionType, logDate, startDate, endDate, start, rows);
+            SolrDocumentList documents = solrService.searchDocuments(logLevel, logType, hardwareName, functionType, logDate, context, startDate, endDate, start, rows);
             return ResponseEntity.ok(documents);
         } catch (Exception e) {
             log.error("Failed to search logs: {}", e.getMessage());

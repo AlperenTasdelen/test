@@ -32,7 +32,7 @@ public class SolrService {
 
     private final String documentCollection = "DocumentCollection";
 
-    private final int randomSampleSize = 100;
+    private final int randomSampleSize = 3000000;
 
     public SolrService(@Value("${solr.url}") String solrUrl) {
         this.solrClient = new Http2SolrClient.Builder(solrUrl).build(); // ew HttpSolrClient.Builder(solrUrl).build();
@@ -83,7 +83,7 @@ public class SolrService {
             SolrDocument document = documents.get(0);
 
             return DocumentModel.builder()
-                    .id((UUID) generateLogId())
+                    .id(generateLogId())
                     .logLevel((String) document.getFieldValue("logLevel"))
                     .logType((String) document.getFieldValue("logType"))
                     .hardwareName((String) document.getFieldValue("hardwareName"))
@@ -107,55 +107,23 @@ public class SolrService {
     }
 
     public void clearCollection(String collectionName) throws SolrServerException, IOException {
+        if (!collectionExists(collectionName)) {
+            return;
+        }
+        
         solrClient.deleteByQuery(collectionName, "*:*");
         solrClient.commit(collectionName);
-    }
-
-    public void deleteDocumentById(int id) throws SolrServerException, IOException {
-        solrClient.deleteByQuery("id:" + id);
-        solrClient.commit(documentCollection);
-    }
-
-    public void deleteDocumentsByQuery(String collection, String query) throws SolrServerException, IOException {
-        // Is this necessary ?
-        solrClient.deleteByQuery(collection, query);
-        solrClient.commit(collection);
     }
 
     private UUID generateLogId() {
         return UUID.randomUUID();
     }
 
-    public SolrDocumentList searchDocuments(String logLevel, String logType, String hardwareName, String functionType, String logDate, String startDate, String endDate, Integer start, Integer rows) throws SolrServerException, IOException {
-        
+    public SolrDocumentList searchDocuments(String logLevel, String logType, String hardwareName, String functionType, String logDate, String context, String startDate, String endDate, Integer start, Integer rows) throws SolrServerException, IOException {
         // Create a new SolrQuery that selects all documents from the collection
         SolrQuery query = new SolrQuery("*:*");
-        if(logLevel != null){
-            query.addFilterQuery("logLevel:" + logLevel);
-        }
-        if(logType != null){
-            query.addFilterQuery("logType:" + logType);
-        }
-        if(hardwareName != null){
-            query.addFilterQuery("hardwareName:" + hardwareName);
-        }
-        if(functionType != null){
-            query.addFilterQuery("functionType:" + functionType);
-        }
-        if(logDate != null){
-            query.addFilterQuery("logDate:" + logDate);
-        }
-        if(startDate != null && endDate != null){
-            query.addFilterQuery("logDate:[" + startDate + " TO " + endDate + "]");
-        }
-
-        if(start != null){
-            query.setStart(start);
-        }
-
-        if(rows != null){
-            query.setRows(rows);
-        }
+        addFilters(query, logLevel, logType, hardwareName, functionType, logDate, context, startDate, endDate);
+        managePagination(query, start, rows);
         
         QueryResponse response = solrClient.query(documentCollection, query);
         SolrDocumentList documents = response.getResults();
@@ -228,5 +196,39 @@ public class SolrService {
         return "Context data " + ThreadLocalRandom.current().nextInt(1, 1001);
     }
 
+    public void addFilters(SolrQuery query, String logLevel, String logType, String hardwareName, String functionType, String logDate, String context, String startDate, String endDate) {
+        if(logLevel != null){
+            query.addFilterQuery("logLevel:" + logLevel);
+        }
+        if(logType != null){
+            query.addFilterQuery("logType:" + logType);
+        }
+        if(hardwareName != null){
+            query.addFilterQuery("hardwareName:" + hardwareName);
+        }
+        if(functionType != null){
+            query.addFilterQuery("functionType:" + functionType);
+        }
+        if(logDate != null){
+            query.addFilterQuery("logDate:" + logDate);
+        }
+        if(startDate != null && endDate != null){
+            query.addFilterQuery("logDate:[" + startDate + " TO " + endDate + "]");
+        }
+        if(startDate != null && endDate == null){
+            query.addFilterQuery("logDate:[" + startDate + " TO *]");
+        }
+        if(startDate == null && endDate != null){
+            query.addFilterQuery("logDate:[* TO " + endDate + "]");
+        }
+        if(context != null){
+            query.addFilterQuery("context:" + context);
+        }
+    }
 
+    public void managePagination(SolrQuery query, Integer start, Integer rows) {
+        if(start != null) query.setStart(start);
+
+        if(rows != null) query.setRows(rows);
+    }
 }

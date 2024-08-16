@@ -20,7 +20,7 @@ services:
       #- SOLR_HOST=10.40.31.35
       #- SOLR_JETTY_HOST=0.0.0.0
       #- SOLR_PORT=8983 # is this necessary?
-      - SOLR_JAVA_MEM=-Xms2g -Xmx2g
+      - SOLR_JAVA_MEM=-Xms1g -Xmx1g
       - "SOLR_OPTS=-Dsolr.query.maxBooleanClauses=100000 -Dsolr.filterCache.size=20480 -Dsolr.queryResultCache.size=2048"
     #url: http://localhost:8983/solr
 
