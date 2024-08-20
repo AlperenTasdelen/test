@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import solrtest.SolrService;
 import solrtest.model.DocumentModel;
+import solrtest.model.ResponseModel;
 
 @Log4j2
 @RestController
@@ -71,10 +72,36 @@ public class TcmsTestController {
 
         try {
             SolrDocumentList documents = solrService.searchDocuments(logLevel, logType, hardwareName, functionType, logDate, context, startDate, endDate, start, rows);
-            return ResponseEntity.ok(documents);
+            ResponseModel responseModel = ResponseModel.builder()
+                    .pageSize(rows)
+                    .pageNumber(start)
+                    .totalCount(documents.getNumFound())
+                    .totalPages((int) Math.ceil((double) documents.getNumFound() / rows))
+                    .content(documents)
+                    .build();
+            return ResponseEntity.ok(responseModel);
         } catch (Exception e) {
             log.error("Failed to search logs: {}", e.getMessage());
             return ResponseEntity.status(500).body("Failed to search logs");
+        }
+    }
+
+    //SearchBody, the body is a json string, example:
+    //{"logLevel":"INFO","logType":"TCMS","hardwareName":"TCMS","functionType":"TCMS","logDate":"2021-08-01T00:00:00Z","context":"TCMS","logBody":"{\"key\":\"value\"}"}
+   @GetMapping("/searchBody")
+    public ResponseEntity<?> searchDocumentsByBody(
+        @RequestBody String body,
+        @RequestParam(defaultValue = "0") Integer start,
+        @RequestParam(defaultValue = "10") Integer rows
+    ) {
+        log.info("Received search logs by body request: {}", body);
+
+        try {
+            SolrDocumentList documents = solrService.searchDocumentsByBody(body, start, rows);
+            return ResponseEntity.ok(documents);
+        } catch (Exception e) {
+            log.error("Failed to search logs by body: {}", e.getMessage());
+            return ResponseEntity.status(500).body("Failed to search logs by body");
         }
     }
 

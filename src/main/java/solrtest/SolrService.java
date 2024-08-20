@@ -32,7 +32,7 @@ public class SolrService {
 
     private final String documentCollection = "DocumentCollection";
 
-    private final int randomSampleSize = 3000000;
+    private final int randomSampleSize = 100000;
 
     public SolrService(@Value("${solr.url}") String solrUrl) {
         this.solrClient = new Http2SolrClient.Builder(solrUrl).build(); // ew HttpSolrClient.Builder(solrUrl).build();
@@ -130,6 +130,18 @@ public class SolrService {
         return documents;
     }
 
+    // Search by body
+    // Body is a json string that contains the search query
+    public SolrDocumentList searchDocumentsByBody(String body, Integer start, Integer rows) throws SolrServerException, IOException {
+        SolrQuery query = new SolrQuery();
+        query.setQuery(body);
+        managePagination(query, start, rows);
+
+        QueryResponse response = solrClient.query(documentCollection, query);
+        SolrDocumentList documents = response.getResults();
+        return documents;
+    }
+
     public void deleteDocumentsBeforeDate(String date) throws SolrServerException, IOException {
         solrClient.deleteByQuery(documentCollection, "logDate:[* TO " + date + "]");
         solrClient.commit(documentCollection);
@@ -222,12 +234,17 @@ public class SolrService {
             query.addFilterQuery("logDate:[* TO " + endDate + "]");
         }
         if(context != null){
+            //TODO: make context searchable like a search engine
+            // Example:
+            // "aaa bbb ccc" -> "aaa" "bbb" "ccc" strings might find this query easily
             query.addFilterQuery("context:" + context);
         }
     }
 
     public void managePagination(SolrQuery query, Integer start, Integer rows) {
-        if(start != null) query.setStart(start);
+        if(start != null && rows != null){
+            query.setStart(start*rows);
+        }
 
         if(rows != null) query.setRows(rows);
     }
