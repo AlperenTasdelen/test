@@ -28,19 +28,21 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 public class SolrService {
 
-    private final SolrClient solrClient;
+    private final SolrClient solrClient1;
+    private final SolrClient solrClient2;
 
     private final String documentCollection = "DocumentCollection";
 
     private final int randomSampleSize = 100000;
 
-    public SolrService(@Value("${solr.url}") String solrUrl) {
-        this.solrClient = new Http2SolrClient.Builder(solrUrl).build(); // ew HttpSolrClient.Builder(solrUrl).build();
+    public SolrService(@Value("${solr.url1}") String solrUrl1, @Value("${solr.url2}") String solrUrl2) {
+        this.solrClient1 = new Http2SolrClient.Builder(solrUrl1).build(); // new HttpSolrClient.Builder(solrUrl).build();
+        this.solrClient2 = new Http2SolrClient.Builder(solrUrl2).build(); // new HttpSolrClient.Builder(solrUrl).build();
     }
 
     public void createCollection(String collectionName) throws SolrServerException, IOException {
         CollectionAdminRequest.Create create = CollectionAdminRequest.createCollection(collectionName, 1, 1);
-        CollectionAdminResponse response = create.process(solrClient);
+        CollectionAdminResponse response = create.process(solrClient1);
         if (response.isSuccess()) {
             System.out.println("Collection created successfully");
         } else {
@@ -59,8 +61,8 @@ public class SolrService {
             document.addField("logDate", solrModel.getLogDate());
             document.addField("context", solrModel.getContext());
 
-            UpdateResponse response = solrClient.add(documentCollection, document);
-            solrClient.commit(documentCollection);
+            UpdateResponse response = solrClient1.add(documentCollection, document);
+            solrClient1.commit(documentCollection);
             log.info("Document added successfully: {}", response);
         }
         catch (Exception e) {
@@ -74,7 +76,7 @@ public class SolrService {
             SolrQuery query = new SolrQuery();
             query.setQuery("id:" + id);
 
-            QueryResponse response = solrClient.query(documentCollection, query);
+            QueryResponse response = solrClient1.query(documentCollection, query);
             SolrDocumentList documents = response.getResults();
             if (documents.isEmpty()) {
                 return null;
@@ -99,7 +101,7 @@ public class SolrService {
 
     public boolean collectionExists(String collectionName) throws SolrServerException, IOException {
         CollectionAdminRequest.List listRequest = new CollectionAdminRequest.List();
-        CollectionAdminResponse response = listRequest.process(solrClient);
+        CollectionAdminResponse response = listRequest.process(solrClient1);
 
         // Extract the list of collections from the response
         List<String> collections = (List<String>) response.getResponse().get("collections");
@@ -111,8 +113,8 @@ public class SolrService {
             return;
         }
         
-        solrClient.deleteByQuery(collectionName, "*:*");
-        solrClient.commit(collectionName);
+        solrClient1.deleteByQuery(collectionName, "*:*");
+        solrClient1.commit(collectionName);
     }
 
     private UUID generateLogId() {
@@ -125,7 +127,7 @@ public class SolrService {
         addFilters(query, logLevel, logType, hardwareName, functionType, logDate, context, startDate, endDate);
         managePagination(query, start, rows);
         
-        QueryResponse response = solrClient.query(documentCollection, query);
+        QueryResponse response = solrClient1.query(documentCollection, query);
         SolrDocumentList documents = response.getResults();
         return documents;
     }
@@ -137,14 +139,14 @@ public class SolrService {
         query.setQuery(body);
         managePagination(query, start, rows);
 
-        QueryResponse response = solrClient.query(documentCollection, query);
+        QueryResponse response = solrClient1.query(documentCollection, query);
         SolrDocumentList documents = response.getResults();
         return documents;
     }
 
     public void deleteDocumentsBeforeDate(String date) throws SolrServerException, IOException {
-        solrClient.deleteByQuery(documentCollection, "logDate:[* TO " + date + "]");
-        solrClient.commit(documentCollection);
+        solrClient1.deleteByQuery(documentCollection, "logDate:[* TO " + date + "]");
+        solrClient1.commit(documentCollection);
     }
 
     public void createRandomDocuments(){
@@ -166,7 +168,7 @@ public class SolrService {
             }
 
             // Add documents to Solr
-            UpdateResponse response = solrClient.addBeans("DocumentCollection", documents);
+            UpdateResponse response = solrClient1.addBeans("DocumentCollection", documents);
             //solrClient.commit();
             log.info("{} documents added successfully. Response: {}", randomSampleSize, response);
 

@@ -16,10 +16,10 @@ public class SolrTest implements CommandLineRunner {
 	@Override
 	public void run(String... args) throws Exception {
 		//Initialize SolrService with the Solr URL
-		SolrService solrService = new SolrService("http://localhost:8983/solr");
+		SolrService solrService = new SolrService("http://localhost:8983/solr", "http://localhost:8984/solr");
 
 		//This code is for debugging purposes only
-
+		
 		// Check if DocumentCollection exists, if not, create it
 		if (!solrService.collectionExists("DocumentCollection")) {
 			solrService.createCollection("DocumentCollection");

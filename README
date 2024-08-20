@@ -1,0 +1,44 @@
+Projede kullanılan kütüphane, frameworkler ve teknolojiler:
+    - Apache Solr
+    - SpringBoot
+    - Docker Compose
+    - Apache Maven
+    - Lombok
+
+Proje kurulumu:
+    - pom.xml dosyasındaki Lombok ve Apache Solr kurulumlarını Maven aracılığıyla yapın.
+    - solr-compose-single dosyasında bir terminal açın ve "docker-compose up -d" komutu ile containerları ayağa kaldırın.
+    - Zoo container ve Solr containerlarını Docker Desktop üzerinden görüntüleyin ve Solr Admin'e "http://localhost:8983/solr" urlsi ile bağlanın.
+    - Server ise 8005 portuna kurulmuştur. Postman üzerinden get ve post metotlarını kullanmak için "http://localhost:8005/api/logs" urlsini kullanabilirsiniz.
+
+Obje yapıları:
+    DocumentModel(Dokümanınn kendisi, veri girişi için kullanılır):
+        - UUID id: Dokümanın özgün id sini ifade eder. 
+        - String logLevel: Dokümanın seviyesini ifade eder.
+        - String logType: Dokümanın çeşidini ifade eder.
+        - String hardwareName: Dokümanın hangi sistemden, sürücüden veya yönlendiriciden geldiğini ifade eder.
+        - String functionType: Dokümanın konksiyonalite çeşidini ifade eder.
+        - Date logDate: Dokümanın yapılış tarihini ifade eder.
+        - String context: Dokümanın içeriğini ifade eder.
+
+    ResponseModel(İstenilen dokümanları çıkarma aracı, veri talebi için kullanılır):
+        - int pageSize: İstenilen veri sonucu gösterilebilen doküman sayısını ifade eder.
+        - int pageNumber: İstenilen veriyi görüntüleyen sayfanın numarası.
+        - long totalCount: İstenilen verinin toplam boyutu.
+        - int totalPages: İstenilen veriyi göstermeye yetecek olan toplam sayfa sayısı.
+        - SolrDocumentList content: İstenilen verinin array içinde tutulmuş hali.
+ 
+Etkin fonksiyonlar ve özellikler:
+    - Veri Kaydetme:
+        - "http://localhost:8005/api/logs" urlsine "/save" etiketi ve POST methodu ile istenilen veriyi sisteme giriniz.
+    - Veri Arama:
+        - "http://localhost:8005/api/logs" urlsine "/search?" etiketi ve GET methodu ile istenilen parametreleri giriniz.
+        - Parametreler:
+            - logLevel, logType, hardwareName, functionType, logDate, context, startDate, endDate.
+            - Bu parametrelerin hepsini yazmak zorunlu değildir.
+            - "logLevel=INFO&" yazmanız tüm info log seviyesini içeren dokümanları göüntülemenizi sağlar.
+            - startDate ve endDate parametreleri iki tarih arası olamn dokümanları seçebilmenize olanak sağlar ve sadece birinin olması da yeterlidir.
+            - start ve rows parametreleri ise sırasıyla istenilen sayfayı ve sayfa boyutunu tanımlar, sayfa sayısı belirtilmediyse ilk sayfayı ifade eder, sayfa boyutu tanımlanmadıysa 10 olarak tanımlanır.
+        
+    - Veri silme:
+        - "http://localhost:8005/api/logs" urlsine "/deleteBeforeDate" etiketi ve bir tarih verilmesi yeterlidir. 
