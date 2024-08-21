@@ -9,7 +9,6 @@ import org.apache.solr.client.solrj.request.CollectionAdminRequest;
 import org.apache.solr.client.solrj.response.CollectionAdminResponse;
 import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.client.solrj.response.QueryResponse;
-import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,21 +27,23 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 public class SolrService {
 
-    private final SolrClient solrClient1;
-    private final SolrClient solrClient2;
+    private final SolrClient solrClient;
+    private final SolrClient documentClient1;
+    private final SolrClient documentClient2;
 
     private final String documentCollection = "DocumentCollection";
 
     private final int randomSampleSize = 100000;
 
     public SolrService(@Value("${solr.url1}") String solrUrl1, @Value("${solr.url2}") String solrUrl2) {
-        this.solrClient1 = new Http2SolrClient.Builder(solrUrl1).build(); // new HttpSolrClient.Builder(solrUrl).build();
-        this.solrClient2 = new Http2SolrClient.Builder(solrUrl2).build(); // new HttpSolrClient.Builder(solrUrl).build();
+        this.solrClient = new Http2SolrClient.Builder(solrUrl1).build(); // new HttpSolrClient.Builder(solrUrl).build();
+        this.documentClient1 = new Http2SolrClient.Builder(solrUrl1 + "/" + documentCollection).build();
+        this.documentClient2 = new Http2SolrClient.Builder(solrUrl2 + "/" + documentCollection).build();
     }
 
     public void createCollection(String collectionName) throws SolrServerException, IOException {
         CollectionAdminRequest.Create create = CollectionAdminRequest.createCollection(collectionName, 1, 1);
-        CollectionAdminResponse response = create.process(solrClient1);
+        CollectionAdminResponse response = create.process(solrClient);
         if (response.isSuccess()) {
             System.out.println("Collection created successfully");
         } else {
@@ -50,58 +51,9 @@ public class SolrService {
         }
     }
 
-    public void addSampleData(DocumentModel solrModel) throws SolrServerException, IOException {
-        try{
-            SolrInputDocument document = new SolrInputDocument();
-            document.addField("id", generateLogId());
-            document.addField("logLevel", solrModel.getLogLevel());
-            document.addField("logType", solrModel.getLogType());
-            document.addField("hardwareName", solrModel.getHardwareName());
-            document.addField("functionType", solrModel.getFunctionType());
-            document.addField("logDate", solrModel.getLogDate());
-            document.addField("context", solrModel.getContext());
-
-            UpdateResponse response = solrClient1.add(documentCollection, document);
-            solrClient1.commit(documentCollection);
-            log.info("Document added successfully: {}", response);
-        }
-        catch (Exception e) {
-            log.error("Failed to add document: {}", e.getMessage());
-        }
-    }
-
-    public DocumentModel getSampleDataById(int id) throws SolrServerException, IOException {
-        try {
-            // Query Solr to get the document by ID
-            SolrQuery query = new SolrQuery();
-            query.setQuery("id:" + id);
-
-            QueryResponse response = solrClient1.query(documentCollection, query);
-            SolrDocumentList documents = response.getResults();
-            if (documents.isEmpty()) {
-                return null;
-            }
-
-            SolrDocument document = documents.get(0);
-
-            return DocumentModel.builder()
-                    .id(generateLogId())
-                    .logLevel((String) document.getFieldValue("logLevel"))
-                    .logType((String) document.getFieldValue("logType"))
-                    .hardwareName((String) document.getFieldValue("hardwareName"))
-                    .functionType((String) document.getFieldValue("functionType"))
-                    .logDate((Date) document.getFieldValue("logDate"))
-                    .context((String) document.getFieldValue("context"))
-                    .build();
-        } catch (Exception e) {
-            log.error("Error retrieving document", e);
-            return null;
-        }
-    }
-
     public boolean collectionExists(String collectionName) throws SolrServerException, IOException {
         CollectionAdminRequest.List listRequest = new CollectionAdminRequest.List();
-        CollectionAdminResponse response = listRequest.process(solrClient1);
+        CollectionAdminResponse response = listRequest.process(solrClient);
 
         // Extract the list of collections from the response
         List<String> collections = (List<String>) response.getResponse().get("collections");
@@ -113,16 +65,84 @@ public class SolrService {
             return;
         }
         
-        solrClient1.deleteByQuery(collectionName, "*:*");
-        solrClient1.commit(collectionName);
+        solrClient.deleteByQuery(collectionName, "*:*");
+        solrClient.commit(collectionName);
     }
 
-    private UUID generateLogId() {
-        return UUID.randomUUID();
+    public void addSampleData(DocumentModel solrModel) throws SolrServerException, IOException {
+        try{
+            SolrClient selectedDocumentClient = ThreadLocalRandom.current().nextBoolean() ? documentClient1 : documentClient2;
+            SolrClient otherDocumentClient = selectedDocumentClient == documentClient1 ? documentClient2 : documentClient1;
+
+            if(!isSolrClientAvailable(selectedDocumentClient)){
+                log.error("The selected Solr client is not available. Aborting operation");
+                return;
+            }
+
+            log.info("Selected client: {}", selectedDocumentClient == documentClient1 ? "DocumentClient1" : "DocumentClient2");
+
+            SolrInputDocument document = new SolrInputDocument();
+            document.addField("id", generateLogId());
+            document.addField("logLevel", solrModel.getLogLevel());
+            document.addField("logType", solrModel.getLogType());
+            document.addField("hardwareName", solrModel.getHardwareName());
+            document.addField("functionType", solrModel.getFunctionType());
+            document.addField("logDate", solrModel.getLogDate());
+            document.addField("context", solrModel.getContext());
+
+            if(isSolrClientAvailable(otherDocumentClient)){
+                log.info("Other Solr client is available. Committing operation");
+            }
+            else{
+                log.error("The other Solr client is not available. Aborting operation");
+                return;
+            }
+
+            UpdateResponse response = selectedDocumentClient.add(document);
+
+            if(response.getStatus() == 0){
+                selectedDocumentClient.commit();
+                otherDocumentClient.commit();
+                log.info("Document added successfully: {}", response);
+            }
+            else{
+                log.error("Failed to add document: {}", response);
+            }
+        }
+        catch (Exception e) {
+            log.error("Failed to add document: {}", e.getMessage());
+        }
     }
 
     public SolrDocumentList searchDocuments(String logLevel, String logType, String hardwareName, String functionType, String logDate, String context, String startDate, String endDate, Integer start, Integer rows) throws SolrServerException, IOException {
         // Create a new SolrQuery that selects all documents from the collection
+        SolrClient selectedDocumentClient = ThreadLocalRandom.current().nextBoolean() ? documentClient1 : documentClient2;
+        SolrClient otherDocumentClient = selectedDocumentClient == documentClient1 ? documentClient2 : documentClient1;
+
+        if(!isSolrClientAvailable(selectedDocumentClient)){
+            log.error("The selected Solr client is not available. Aborting operation");
+            return null;
+        }
+
+        log.info("Selected client: {}", selectedDocumentClient == documentClient1 ? "DocumentClient1" : "DocumentClient2");
+
+        SolrQuery query = new SolrQuery("*:*");
+        addFilters(query, logLevel, logType, hardwareName, functionType, logDate, context, startDate, endDate);
+        managePagination(query, start, rows);
+
+        if(isSolrClientAvailable(otherDocumentClient)){
+            log.info("Other Solr client is available. Committing operation");
+        }
+        else{
+            log.error("The other Solr client is not available. Aborting operation");
+            return null;
+        }
+
+        QueryResponse response = selectedDocumentClient.query(query);
+        SolrDocumentList documents = response.getResults();
+        return documents;
+
+        /*
         SolrQuery query = new SolrQuery("*:*");
         addFilters(query, logLevel, logType, hardwareName, functionType, logDate, context, startDate, endDate);
         managePagination(query, start, rows);
@@ -130,6 +150,7 @@ public class SolrService {
         QueryResponse response = solrClient1.query(documentCollection, query);
         SolrDocumentList documents = response.getResults();
         return documents;
+        */
     }
 
     // Search by body
@@ -139,14 +160,32 @@ public class SolrService {
         query.setQuery(body);
         managePagination(query, start, rows);
 
-        QueryResponse response = solrClient1.query(documentCollection, query);
+        QueryResponse response = solrClient.query(documentCollection, query);
         SolrDocumentList documents = response.getResults();
         return documents;
     }
 
     public void deleteDocumentsBeforeDate(String date) throws SolrServerException, IOException {
-        solrClient1.deleteByQuery(documentCollection, "logDate:[* TO " + date + "]");
-        solrClient1.commit(documentCollection);
+        SolrClient selectedDocumentClient = ThreadLocalRandom.current().nextBoolean() ? documentClient1 : documentClient2;
+        SolrClient otherDocumentClient = selectedDocumentClient == documentClient1 ? documentClient2 : documentClient1;
+
+        if(!isSolrClientAvailable(selectedDocumentClient)){
+            log.error("The selected Solr client is not available. Aborting operation");
+            return;
+        }
+
+        log.info("Selected client: {}", selectedDocumentClient == documentClient1 ? "DocumentClient1" : "DocumentClient2");
+
+        if(isSolrClientAvailable(otherDocumentClient)){
+            log.info("Other Solr client is available. Committing operation");
+        }
+        else{
+            log.error("The other Solr client is not available. Aborting operation");
+            return;
+        }
+
+        selectedDocumentClient.deleteByQuery("logDate:[* TO " + date + "]");
+        selectedDocumentClient.commit();
     }
 
     public void createRandomDocuments(){
@@ -168,7 +207,7 @@ public class SolrService {
             }
 
             // Add documents to Solr
-            UpdateResponse response = solrClient1.addBeans("DocumentCollection", documents);
+            UpdateResponse response = solrClient.addBeans("DocumentCollection", documents);
             //solrClient.commit();
             log.info("{} documents added successfully. Response: {}", randomSampleSize, response);
 
@@ -179,6 +218,11 @@ public class SolrService {
     }
 
     // Random data generation methods
+
+    private UUID generateLogId() {
+        return UUID.randomUUID();
+    }
+
     private String randomLogLevel() {
         String[] logLevels = {"INFO", "DEBUG", "ERROR", "WARN"};
         return logLevels[ThreadLocalRandom.current().nextInt(logLevels.length)];
@@ -249,5 +293,15 @@ public class SolrService {
         }
 
         if(rows != null) query.setRows(rows);
+    }
+
+    private boolean isSolrClientAvailable(SolrClient solrClient){
+        try {
+            // Try a simple ping to check if the client is available
+            solrClient.ping();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

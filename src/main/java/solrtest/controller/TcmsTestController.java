@@ -40,20 +40,6 @@ public class TcmsTestController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/get/{id}")
-    public ResponseEntity<?> getDocumentById(@PathVariable String id) {
-        log.info("Received get logs request: {}", id);
-
-        try {
-            int docId = Integer.parseInt(id);
-            DocumentModel solrModel = solrService.getSampleDataById(docId);
-            return ResponseEntity.ok(solrModel);
-        } catch (Exception e) {
-            log.error("Failed to get logs: {}", e.getMessage());
-            return ResponseEntity.status(500).body("Failed to get logs");
-        }
-    }
-
     // Search
     @GetMapping("/search")
     public ResponseEntity<?> searchDocuments(
@@ -108,6 +94,11 @@ public class TcmsTestController {
     //Delete before given date
     @DeleteMapping("/deleteBeforeDate")
     public ResponseEntity<?> deleteDocumentsBeforeDate(@RequestParam String date) {
+        if(date == null || date.isEmpty()) {
+            log.error("Invalid date");
+            return ResponseEntity.badRequest().body("Invalid date");
+        }
+
         log.info("Received delete logs before date request: {}", date);
 
         try {
