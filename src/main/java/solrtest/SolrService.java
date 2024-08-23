@@ -69,15 +69,21 @@ public class SolrService {
         solrClient.commit(collectionName);
     }
 
-    public void addSampleData(DocumentModel solrModel) throws SolrServerException, IOException {
-        try{
-            SolrClient selectedDocumentClient = ThreadLocalRandom.current().nextBoolean() ? documentClient1 : documentClient2;
-            SolrClient otherDocumentClient = selectedDocumentClient == documentClient1 ? documentClient2 : documentClient1;
+    private SolrClient getAvailableClient() throws SolrServerException, IOException {
+        if(isSolrClientAvailable(documentClient1)){
+            return documentClient1;
+        }
+        else if(isSolrClientAvailable(documentClient2)){
+            return documentClient2;
+        }
+        else{
+            throw new SolrServerException("No Solr clients available");
+        }
+    }
 
-            if(!isSolrClientAvailable(selectedDocumentClient)){
-                log.error("The selected Solr client is not available. Aborting operation");
-                return;
-            }
+    public void addData(DocumentModel solrModel) throws SolrServerException, IOException {
+        try{
+            SolrClient selectedDocumentClient = getAvailableClient();
 
             log.info("Selected client: {}", selectedDocumentClient == documentClient1 ? "DocumentClient1" : "DocumentClient2");
 
@@ -87,22 +93,14 @@ public class SolrService {
             document.addField("logType", solrModel.getLogType());
             document.addField("hardwareName", solrModel.getHardwareName());
             document.addField("functionType", solrModel.getFunctionType());
-            document.addField("logDate", solrModel.getLogDate());
+            // add current date if logDate is not provided
+            document.addField("logDate", solrModel.getLogDate() != null ? solrModel.getLogDate() : new Date());
             document.addField("context", solrModel.getContext());
-
-            if(isSolrClientAvailable(otherDocumentClient)){
-                log.info("Other Solr client is available. Committing operation");
-            }
-            else{
-                log.error("The other Solr client is not available. Aborting operation");
-                return;
-            }
 
             UpdateResponse response = selectedDocumentClient.add(document);
 
             if(response.getStatus() == 0){
                 selectedDocumentClient.commit();
-                otherDocumentClient.commit();
                 log.info("Document added successfully: {}", response);
             }
             else{
@@ -116,49 +114,31 @@ public class SolrService {
 
     public SolrDocumentList searchDocuments(String logLevel, String logType, String hardwareName, String functionType, String logDate, String context, String startDate, String endDate, Integer start, Integer rows) throws SolrServerException, IOException {
         // Create a new SolrQuery that selects all documents from the collection
-        SolrClient selectedDocumentClient = ThreadLocalRandom.current().nextBoolean() ? documentClient1 : documentClient2;
-        SolrClient otherDocumentClient = selectedDocumentClient == documentClient1 ? documentClient2 : documentClient1;
-
-        if(!isSolrClientAvailable(selectedDocumentClient)){
-            log.error("The selected Solr client is not available. Aborting operation");
-            return null;
-        }
+        SolrClient selectedDocumentClient = getAvailableClient();
 
         log.info("Selected client: {}", selectedDocumentClient == documentClient1 ? "DocumentClient1" : "DocumentClient2");
 
         SolrQuery query = new SolrQuery("*:*");
         addFilters(query, logLevel, logType, hardwareName, functionType, logDate, context, startDate, endDate);
         managePagination(query, start, rows);
+        //manageMoreLikeThis(query);
 
-        if(isSolrClientAvailable(otherDocumentClient)){
-            log.info("Other Solr client is available. Committing operation");
-        }
-        else{
-            log.error("The other Solr client is not available. Aborting operation");
-            return null;
-        }
+        // query must be sorted by logDate in descending order
+        query.setSort("logDate", SolrQuery.ORDER.desc);
 
         QueryResponse response = selectedDocumentClient.query(query);
         SolrDocumentList documents = response.getResults();
         return documents;
-
-        /*
-        SolrQuery query = new SolrQuery("*:*");
-        addFilters(query, logLevel, logType, hardwareName, functionType, logDate, context, startDate, endDate);
-        managePagination(query, start, rows);
-        
-        QueryResponse response = solrClient1.query(documentCollection, query);
-        SolrDocumentList documents = response.getResults();
-        return documents;
-        */
     }
 
     // Search by body
     // Body is a json string that contains the search query
+    // TODO: Implement a search mechanism
     public SolrDocumentList searchDocumentsByBody(String body, Integer start, Integer rows) throws SolrServerException, IOException {
         SolrQuery query = new SolrQuery();
         query.setQuery(body);
         managePagination(query, start, rows);
+        //manageMoreLikeThis(query);
 
         QueryResponse response = solrClient.query(documentCollection, query);
         SolrDocumentList documents = response.getResults();
@@ -166,23 +146,9 @@ public class SolrService {
     }
 
     public void deleteDocumentsBeforeDate(String date) throws SolrServerException, IOException {
-        SolrClient selectedDocumentClient = ThreadLocalRandom.current().nextBoolean() ? documentClient1 : documentClient2;
-        SolrClient otherDocumentClient = selectedDocumentClient == documentClient1 ? documentClient2 : documentClient1;
-
-        if(!isSolrClientAvailable(selectedDocumentClient)){
-            log.error("The selected Solr client is not available. Aborting operation");
-            return;
-        }
+        SolrClient selectedDocumentClient = getAvailableClient();
 
         log.info("Selected client: {}", selectedDocumentClient == documentClient1 ? "DocumentClient1" : "DocumentClient2");
-
-        if(isSolrClientAvailable(otherDocumentClient)){
-            log.info("Other Solr client is available. Committing operation");
-        }
-        else{
-            log.error("The other Solr client is not available. Aborting operation");
-            return;
-        }
 
         selectedDocumentClient.deleteByQuery("logDate:[* TO " + date + "]");
         selectedDocumentClient.commit();
@@ -255,44 +221,38 @@ public class SolrService {
     }
 
     public void addFilters(SolrQuery query, String logLevel, String logType, String hardwareName, String functionType, String logDate, String context, String startDate, String endDate) {
-        if(logLevel != null){
-            query.addFilterQuery("logLevel:" + logLevel);
-        }
-        if(logType != null){
-            query.addFilterQuery("logType:" + logType);
-        }
-        if(hardwareName != null){
-            query.addFilterQuery("hardwareName:" + hardwareName);
-        }
-        if(functionType != null){
-            query.addFilterQuery("functionType:" + functionType);
-        }
-        if(logDate != null){
-            query.addFilterQuery("logDate:" + logDate);
-        }
-        if(startDate != null && endDate != null){
-            query.addFilterQuery("logDate:[" + startDate + " TO " + endDate + "]");
-        }
-        if(startDate != null && endDate == null){
-            query.addFilterQuery("logDate:[" + startDate + " TO *]");
-        }
-        if(startDate == null && endDate != null){
-            query.addFilterQuery("logDate:[* TO " + endDate + "]");
-        }
-        if(context != null){
-            //TODO: make context searchable like a search engine
-            // Example:
-            // "aaa bbb ccc" -> "aaa" "bbb" "ccc" strings might find this query easily
-            query.addFilterQuery("context:" + context);
-        }
+        if (logLevel != null) query.addFilterQuery("logLevel:" + logLevel);
+        if (logType != null) query.addFilterQuery("logType:" + logType);
+        if (hardwareName != null) query.addFilterQuery("hardwareName:" + hardwareName);
+        if (functionType != null) query.addFilterQuery("functionType:" + functionType);
+        if (logDate != null) query.addFilterQuery("logDate:" + logDate);
+
+        if(startDate == null) startDate = "*";
+        if(endDate == null) endDate = "*";
+        query.addFilterQuery("logDate:[" + startDate + " TO " + endDate + "]");
+
+        if (context != null) query.addFilterQuery("context:" + context + "~"); // Fuzzy search
     }
 
     public void managePagination(SolrQuery query, Integer start, Integer rows) {
         if(start != null && rows != null){
-            query.setStart(start*rows);
+            query.setStart(start * rows);
         }
 
         if(rows != null) query.setRows(rows);
+    }
+
+    // MoreLikeThis
+    public void manageMoreLikeThis(SolrQuery query) {
+        //query.setMoreLikeThis(true);
+        //query.setMoreLikeThisFields("context");
+        //query.setMoreLikeThisCount(10);
+        query.set("mlt", true);
+        query.set("mlt.fl", "context"); // Field to find similarity in
+        query.set("mlt.mindf", 1);
+        query.set("mlt.mintf", 1);
+        query.set("mlt.count", 10);
+        query.set("mlt.qf", "context:", "Context data 15");
     }
 
     private boolean isSolrClientAvailable(SolrClient solrClient){

@@ -30,20 +30,25 @@ Obje yapıları:
  
 Etkin fonksiyonlar ve özellikler:
     - Veri Kaydetme:
-        - "http://localhost:8005/api/logs" urlsine "/save" etiketi ve POST methodu ile istenilen veriyi sisteme giriniz.
+        - "http://localhost:8005/api/logs" urlsine "/save" etiketi ve "POST" methodu ile istenilen veriyi sisteme giriniz.
     - Veri Arama:
-        - "http://localhost:8005/api/logs" urlsine "/search?" etiketi ve GET methodu ile istenilen parametreleri giriniz.
+        - "http://localhost:8005/api/logs" urlsine "/search?" etiketi ve "GET" methodu ile istenilen parametreleri giriniz.
         - Parametreler:
             - logLevel, logType, hardwareName, functionType, logDate, context, startDate, endDate.
             - Bu parametrelerin hepsini yazmak zorunlu değildir.
             - "logLevel=INFO&" yazmanız tüm info log seviyesini içeren dokümanları göüntülemenizi sağlar.
             - startDate ve endDate parametreleri iki tarih arası olamn dokümanları seçebilmenize olanak sağlar ve sadece birinin olması da yeterlidir.
             - start ve rows parametreleri ise sırasıyla istenilen sayfayı ve sayfa boyutunu tanımlar, sayfa sayısı belirtilmediyse ilk sayfayı ifade eder, sayfa boyutu tanımlanmadıysa 10 olarak tanımlanır.
+            - Context parametresinde özel olarak similarity fonksiyonu kullanılmıştır ve bu fonksiyon ile benzer içerikli dokümanlar aranabilir.
         
     - Veri silme:
-        - "http://localhost:8005/api/logs" urlsine "/deleteBeforeDate" etiketi ve bir tarih verilmesi yeterlidir. 
+        - "http://localhost:8005/api/logs" urlsine "/deleteBeforeDate" etiketi, "DELETE" methodu ve bir tarih verilmesi yeterlidir. 
 
     - Master-Master Replikasyonu:
         - Docker Compose ile oluşturulan Zookeeper ve Solr containerları arasında master-master replikasyonu yapılmıştır.
         - Sistem çökmesi durumunda veri kaybı olmaması için ikili master kurulumu yapılmıştır.
-        - Herhangi bir operasyon gelmesi durumunda çalışan master diğer çökmüş masterın durumunu kontrol eder ve operasyon iptali yoluna gider.
+        - Birinci sunucu 8983 portunda, ikinci sunucu ise 8984 portunda çalışmaktadır.
+        - Ana sunucunun çökmesi durumunda ikinci sunucu devreye girer ve veri kaybı olmaz.
+        - Her iki sunucu da aynı veriye sahiptir ve aynı işlemleri yapabilir.
+        - İkinci sunucunun çökmesi durumunda ise sistem operasyonu durdurur ve veri kaybı olmaz.
+        - Sunucu urlleri "http://localhost:8983/solr" ve "http://localhost:8984/solr" şeklindedir.

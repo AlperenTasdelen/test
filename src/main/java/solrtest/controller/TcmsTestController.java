@@ -31,7 +31,7 @@ public class TcmsTestController {
         }
 
         try {
-            solrService.addSampleData(solrModel);
+            solrService.addData(solrModel);
         } catch (Exception e) {
             log.error("Failed to save logs: {}", e.getMessage());
             return ResponseEntity.status(500).body("Failed to save logs");
